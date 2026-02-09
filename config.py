@@ -104,6 +104,33 @@ PESO_FALSOS_POSITIVOS = 20
 # CONFIGURACIÓN DE LOGGING
 # ================================================================================
 
+def obtener_ruta_csv(nombre_archivo: str) -> str:
+    """
+    Resuelve la ruta completa de un archivo CSV.
+    
+    Busca el archivo en el siguiente orden:
+    1. Si es ruta absoluta, la usa directamente
+    2. Si existe en el directorio actual, usa esa ruta
+    3. Si no, busca en DIRECTORIO_SALIDA (output/)
+    
+    Args:
+        nombre_archivo: Nombre o ruta del archivo CSV
+        
+    Returns:
+        Ruta absoluta al archivo
+    """
+    # Si es ruta absoluta, usarla directamente
+    if os.path.isabs(nombre_archivo):
+        return nombre_archivo
+    
+    # Buscar primero en directorio actual
+    if os.path.exists(nombre_archivo):
+        return os.path.abspath(nombre_archivo)
+    
+    # Buscar en directorio de salida
+    return os.path.join(DIRECTORIO_SALIDA, nombre_archivo)
+
+
 def configurar_logging(nombre_modulo: str, nivel: int = logging.INFO) -> logging.Logger:
     """
     Configura y retorna un logger para el módulo especificado.

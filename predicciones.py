@@ -4,6 +4,8 @@ Script de predicciones usando el modelo entrenado.
 """
 
 import os
+import sys
+import argparse
 import warnings
 import joblib
 import pandas as pd
@@ -13,7 +15,7 @@ from sklearn.metrics import confusion_matrix
 # Importar configuración y utilidades compartidas
 from config import (
     DIRECTORIO_SALIDA, MODELO_FINAL, CSV_TESTEAR, CSV_PREDICCIONES,
-    PESO_FALSOS_POSITIVOS, configurar_logging
+    PESO_FALSOS_POSITIVOS, configurar_logging, obtener_ruta_csv
 )
 from utils import crear_derivadas, analizar_membranas, calcular_score_balanceado
 
@@ -82,8 +84,16 @@ def guardar_predicciones(df_base: pd.DataFrame, y_real: np.ndarray,
 # EJECUCIÓN PRINCIPAL
 # ================================================================================
 
-def main():
-    """Función principal que ejecuta las predicciones."""
+def main(csv_input: str = None):
+    """
+    Función principal que ejecuta las predicciones.
+    
+    Args:
+        csv_input: Ruta al archivo CSV de entrada (opcional, usa CSV_TESTEAR por defecto)
+    """
+    
+    # Determinar archivo de entrada
+    archivo_entrada = obtener_ruta_csv(csv_input) if csv_input else CSV_TESTEAR
     
     logger.info("=" * 70)
     logger.info("GENERACIÓN DE PREDICCIONES")
@@ -113,16 +123,16 @@ def main():
     # Carga de datos
     # --------------------------------------------------------------------------
     
-    logger.info(f"Cargando dataset: {CSV_TESTEAR}")
+    logger.info(f"Cargando dataset: {archivo_entrada}")
     
-    if not os.path.exists(CSV_TESTEAR):
-        raise FileNotFoundError(f"No se encuentra el archivo {CSV_TESTEAR}")
+    if not os.path.exists(archivo_entrada):
+        raise FileNotFoundError(f"No se encuentra el archivo {archivo_entrada}")
     
     try:
-        df_input = pd.read_csv(CSV_TESTEAR) 
+        df_input = pd.read_csv(archivo_entrada) 
     except Exception as e:
         logger.warning(f"Intentando con separador punto y coma... ({e})")
-        df_input = pd.read_csv(CSV_TESTEAR, sep=';')
+        df_input = pd.read_csv(archivo_entrada, sep=';')
     
     logger.info(f"Datos cargados: {len(df_input)} filas")
     
@@ -217,4 +227,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    class ArgumentParserES(argparse.ArgumentParser):
+        """ArgumentParser con mensajes en castellano."""
+        def error(self, message):
+            self.print_usage(sys.stderr)
+            sys.stderr.write(f'Error: Se requiere especificar el archivo CSV a predecir.\n')
+            sys.exit(2)
+    
+    parser = ArgumentParserES(
+        description='Genera predicciones usando el modelo entrenado.',
+        usage='python predicciones.py <archivo.csv>'
+    )
+    parser.add_argument(
+        'csv_file',
+        help='Archivo CSV a predecir (ruta relativa o absoluta)'
+    )
+    
+    args = parser.parse_args()
+    main(args.csv_file)
