@@ -107,6 +107,7 @@ Guarda: `output/modelo_final.pkl`
 
 > **Doble propósito:** Este script sirve tanto para **validar el modelo** con datos no vistos como para **producción**.
 
+<<<<<<< HEAD
 **Uso:**
 ```bash
 python predicciones.py <archivo.csv>
@@ -117,14 +118,29 @@ python predicciones.py <archivo.csv>
 python predicciones.py testear.csv
 ```
 Usa `testear.csv` (dataset que **NO** fue usado en la creación del modelo) para evaluar el rendimiento final.
+=======
+#### 4.1. Validación del modelo (con testear.csv)
+```bash
+python predicciones.py
+```
+Por defecto, usa `testear.csv` (dataset que **NO** fue usado en la creación del modelo) para evaluar el rendimiento final.
+>>>>>>> b16c19fd18c87613ca90fc82ee541a9e307c0a72
 
 Genera: `output/predicciones.csv` con métricas de validación.
 
 #### 4.2. Uso en producción
+<<<<<<< HEAD
 ```bash
 python predicciones.py datos_nuevos.csv
 python predicciones.py /ruta/completa/al/archivo.csv
 ```
+=======
+Para usar el modelo en producción con datos nuevos:
+
+1. Modifica `config.py` para cambiar `CSV_TESTEAR` a tu archivo de datos nuevos
+2. Ejecuta `python predicciones.py`
+3. Revisa `output/predicciones.csv` con las predicciones finales
+>>>>>>> b16c19fd18c87613ca90fc82ee541a9e307c0a72
 
 **Nota:** El script detecta automáticamente si los datos tienen la columna `Ciclos`. Si está presente, calcula métricas; si no, solo genera predicciones.
 
