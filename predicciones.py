@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 
 # Importar configuración y utilidades compartidas
 from config import (
-    DIRECTORIO_SALIDA,
+    DIRECTORIO_SALIDA, UMBRAL_CICLOS_DEFAULT,
     PESO_FALSOS_POSITIVOS, configurar_logging, obtener_ruta
 )
 from utils import crear_derivadas, analizar_membranas, calcular_score_balanceado
@@ -84,14 +84,14 @@ def guardar_predicciones(df_base: pd.DataFrame, y_real: np.ndarray,
 # EJECUCIÓN PRINCIPAL
 # ================================================================================
 
-def main(csv_input: str, model_file: str, threshold_override: float = None):
+def main(csv_input: str, model_file: str, threshold: float):
     """
     Función principal que ejecuta las predicciones.
     
     Args:
         csv_input: Ruta al archivo CSV de entrada
         model_file: Ruta al archivo PKL del modelo
-        threshold_override: Threshold a usar (si None, se usa el del modelo)
+        threshold: Umbral de decisión (obligatorio)
     """
     
     # Resolver rutas (busca en: ruta absoluta → directorio actual → output/)
@@ -114,18 +114,14 @@ def main(csv_input: str, model_file: str, threshold_override: float = None):
     config = joblib.load(archivo_modelo)
     logger.info("Modelo cargado correctamente.")
     
-    # Extraer configuración (soporta ambas claves para compatibilidad)
-    UMBRAL_CICLOS = config.get('umbral_ciclos', 9)
-    THRESHOLD = config.get('threshold', 0.45)
+    # Extraer configuración del modelo
+    UMBRAL_CICLOS = UMBRAL_CICLOS_DEFAULT
+    THRESHOLD = threshold
     SCALER = config.get('scaler', None)
     COLS_FEATURE = config.get('feature_cols', config.get('feature_names', None))
     MODELO = config.get('modelo', None)
     NOMBRE_MODELO = config.get('nombre_modelo', 'modelo')
 
-    if threshold_override is not None:
-        logger.info(f"Threshold sobreescrito por argumento: {threshold_override} (modelo tenía: {THRESHOLD})")
-        THRESHOLD = threshold_override
-    
     logger.info(f"Configuración del modelo — Nombre: {NOMBRE_MODELO} | Threshold: {THRESHOLD} | Umbral ciclos: {UMBRAL_CICLOS}")
 
     # --------------------------------------------------------------------------
@@ -248,7 +244,7 @@ if __name__ == "__main__":
     
     parser = ArgumentParserES(
         description='Genera predicciones usando el modelo entrenado.',
-        usage='python predicciones.py -d <archivo.csv> -m <modelo.pkl> [-t <threshold>]'
+        usage='python predicciones.py -d <archivo.csv> -m <modelo.pkl> -t <threshold>'
     )
     parser.add_argument(
         '-d', '--dataset',
@@ -263,8 +259,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '-t', '--threshold',
         type=float,
-        default=None,
-        help='Threshold de decisión (0-1). Si no se indica, se usa el guardado en el modelo.'
+        required=True,
+        help='Threshold de decisión (0-1)'
     )
     
     args = parser.parse_args()

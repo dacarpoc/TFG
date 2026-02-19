@@ -97,7 +97,7 @@ def main(nombre_modelo: str, listar: bool = False):
     if listar:
         logger.info("Modelos disponibles en el archivo de configuraciones:")
         for nombre, cfg in sorted(configs_por_nombre.items(), key=lambda x: x[1].get('score_balanceado', 0), reverse=True):
-            logger.info(f"  {nombre:35} | Score: {cfg.get('score_balanceado', '?'):.2f} | Threshold: {cfg.get('threshold', '?')}")
+            logger.info(f"  {nombre:35} | Score: {cfg.get('score_balanceado', '?'):.2f}")
         return
 
     if nombre_modelo not in configs_por_nombre:
@@ -106,7 +106,6 @@ def main(nombre_modelo: str, listar: bool = False):
         sys.exit(1)
 
     config_elegida = configs_por_nombre[nombre_modelo]
-    threshold_elegido = config_elegida['threshold']
     nombre_base = nombre_modelo.split('_')[0]
 
     # Los hiperparámetros se guardaron como str(), recuperar con ast.literal_eval
@@ -116,7 +115,6 @@ def main(nombre_modelo: str, listar: bool = False):
     logger.info("=" * 60)
     logger.info(f"Modelo seleccionado : {nombre_modelo}")
     logger.info(f"Algoritmo base      : {nombre_base}")
-    logger.info(f"Threshold guardado  : {threshold_elegido}")
     logger.info(f"Score balanceado    : {config_elegida.get('score_balanceado', '?'):.2f}")
     logger.info(f"Hiperparámetros     : {params}")
     logger.info("=" * 60)
@@ -175,8 +173,6 @@ def main(nombre_modelo: str, listar: bool = False):
     ruta_salida = os.path.join(DIRECTORIO_SALIDA, f"modelo_{nombre_modelo}.pkl")
 
     config_produccion = {
-        'umbral_ciclos': UMBRAL_OPTIMO,
-        'threshold': threshold_elegido,
         'scaler': scaler,
         'modelo': modelo,
         'feature_cols': columnas,

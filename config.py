@@ -37,8 +37,7 @@ ORDEN_PRENSAS = ['P1', 'P2']
 CSV_ENTRENAR = os.path.join(DIRECTORIO_SALIDA, "entrenar.csv")
 CSV_VALIDAR = os.path.join(DIRECTORIO_SALIDA, "validar.csv")
 CSV_TESTEAR = os.path.join(DIRECTORIO_SALIDA, "testear.csv")
-MODELO_PRELIMINAR = os.path.join(DIRECTORIO_SALIDA, "modelo_preliminar.pkl")
-CSV_PREDICCIONES = os.path.join(DIRECTORIO_SALIDA, "predicciones.csv")
+RESULTADOS_PRELIMINAR = os.path.join(DIRECTORIO_SALIDA, "resultados_preliminar.csv")
 RESULTADOS_MEJORES_MODELOS = os.path.join(DIRECTORIO_SALIDA, "registro_mejores_modelos.csv")
 CONFIGURACION_MEJORES_MODELOS = os.path.join(DIRECTORIO_SALIDA, "todas_las_configs.joblib")
 
