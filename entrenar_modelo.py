@@ -5,7 +5,7 @@ guardados en output/todas_las_configs.joblib, sin necesidad de reejecutar Optuna
 
 Uso:
     python entrenar_modelo.py -n RandomForest_mcc
-    python entrenar_modelo.py -n RandomForest_mcc --listar
+    python entrenar_modelo.py --listar
 """
 
 import os

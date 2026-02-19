@@ -98,9 +98,9 @@ def main(csv_input: str, model_file: str, threshold: float):
     archivo_entrada = obtener_ruta(csv_input)
     archivo_modelo = obtener_ruta(model_file)
     
-    logger.info("=" * 70)
+    logger.info("=" * 60)
     logger.info("GENERACIÓN DE PREDICCIONES")
-    logger.info("=" * 70)
+    logger.info("=" * 60)
     
     # --------------------------------------------------------------------------
     # Carga del modelo
@@ -199,9 +199,9 @@ def main(csv_input: str, model_file: str, threshold: float):
         pct_membranas = det / total_membranas if total_membranas > 0 else 0
         score = calcular_score_balanceado(pct_membranas, fp, total_membranas, PESO_FALSOS_POSITIVOS)
         
-        logger.info("=" * 50)
+        logger.info("=" * 60)
         logger.info("RESULTADOS")
-        logger.info("=" * 50)
+        logger.info("=" * 60)
         logger.info(f"Membranas con rotura (Total): {total_membranas}")
         logger.info(f"Membranas Detectadas:         {det}")
         logger.info(f"Falsos Positivos (Filas):     {fp}")
@@ -214,9 +214,9 @@ def main(csv_input: str, model_file: str, threshold: float):
     # Guardado
     # --------------------------------------------------------------------------
     
-    logger.info("=" * 50)
+    logger.info("=" * 60)
     logger.info("Guardando resultados...")
-    logger.info("=" * 50)
+    logger.info("=" * 60)
     
     nombre_dataset = os.path.splitext(os.path.basename(csv_input))[0]
     threshold_str = str(THRESHOLD).replace('.', '_')
@@ -229,9 +229,9 @@ def main(csv_input: str, model_file: str, threshold: float):
         path_salida=csv_salida
     )
     
-    logger.info("=" * 70)
+    logger.info("=" * 60)
     logger.info("PREDICCIONES COMPLETADAS")
-    logger.info("=" * 70)
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
