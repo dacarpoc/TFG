@@ -38,8 +38,9 @@ CSV_ENTRENAR = os.path.join(DIRECTORIO_SALIDA, "entrenar.csv")
 CSV_VALIDAR = os.path.join(DIRECTORIO_SALIDA, "validar.csv")
 CSV_TESTEAR = os.path.join(DIRECTORIO_SALIDA, "testear.csv")
 MODELO_PRELIMINAR = os.path.join(DIRECTORIO_SALIDA, "modelo_preliminar.pkl")
-MODELO_FINAL = os.path.join(DIRECTORIO_SALIDA, "modelo_final.pkl")
 CSV_PREDICCIONES = os.path.join(DIRECTORIO_SALIDA, "predicciones.csv")
+RESULTADOS_MEJORES_MODELOS = os.path.join(DIRECTORIO_SALIDA, "registro_mejores_modelos.csv")
+CONFIGURACION_MEJORES_MODELOS = os.path.join(DIRECTORIO_SALIDA, "todas_las_configs.joblib")
 
 # ================================================================================
 # PARÁMETROS DE PROCESAMIENTO
@@ -75,7 +76,7 @@ COLUMNAS_REDUNDANTES = ["TMI", "PMIN_CONFORMACION"]
 
 RANDOM_STATE = 42
 UMBRALES_CICLOS = [3, 5, 7, 9]
-UMBRAL_CICLOS_DEFAULT = 9  # Valor por defecto si no hay modelo preliminar
+UMBRAL_CICLOS_DEFAULT = 9  # Valor por defecto elegido después de ejecutar preliminar.ipynb
 THRESHOLDS = [round(x, 2) for x in [i * 0.05 for i in range(1, 20)]]  # 0.05 a 0.95
 N_TRIALS_OPTUNA = 50
 
@@ -104,9 +105,9 @@ PESO_FALSOS_POSITIVOS = 20
 # CONFIGURACIÓN DE LOGGING
 # ================================================================================
 
-def obtener_ruta_csv(nombre_archivo: str) -> str:
+def obtener_ruta(nombre_archivo: str) -> str:
     """
-    Resuelve la ruta completa de un archivo CSV.
+    Resuelve la ruta completa de un archivo.
     
     Busca el archivo en el siguiente orden:
     1. Si es ruta absoluta, la usa directamente
@@ -114,7 +115,7 @@ def obtener_ruta_csv(nombre_archivo: str) -> str:
     3. Si no, busca en DIRECTORIO_SALIDA (output/)
     
     Args:
-        nombre_archivo: Nombre o ruta del archivo CSV
+        nombre_archivo: Nombre o ruta del archivo
         
     Returns:
         Ruta absoluta al archivo

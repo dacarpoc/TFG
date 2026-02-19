@@ -14,8 +14,8 @@ from sklearn.metrics import confusion_matrix
 
 # Importar configuración y utilidades compartidas
 from config import (
-    DIRECTORIO_SALIDA, MODELO_FINAL, CSV_TESTEAR, CSV_PREDICCIONES,
-    PESO_FALSOS_POSITIVOS, configurar_logging, obtener_ruta_csv
+    DIRECTORIO_SALIDA,
+    PESO_FALSOS_POSITIVOS, configurar_logging, obtener_ruta
 )
 from utils import crear_derivadas, analizar_membranas, calcular_score_balanceado
 
@@ -84,16 +84,19 @@ def guardar_predicciones(df_base: pd.DataFrame, y_real: np.ndarray,
 # EJECUCIÓN PRINCIPAL
 # ================================================================================
 
-def main(csv_input: str = None):
+def main(csv_input: str, model_file: str, threshold_override: float = None):
     """
     Función principal que ejecuta las predicciones.
     
     Args:
-        csv_input: Ruta al archivo CSV de entrada (opcional, usa CSV_TESTEAR por defecto)
+        csv_input: Ruta al archivo CSV de entrada
+        model_file: Ruta al archivo PKL del modelo
+        threshold_override: Threshold a usar (si None, se usa el del modelo)
     """
     
-    # Determinar archivo de entrada
-    archivo_entrada = obtener_ruta_csv(csv_input) if csv_input else CSV_TESTEAR
+    # Resolver rutas (busca en: ruta absoluta → directorio actual → output/)
+    archivo_entrada = obtener_ruta(csv_input)
+    archivo_modelo = obtener_ruta(model_file)
     
     logger.info("=" * 70)
     logger.info("GENERACIÓN DE PREDICCIONES")
@@ -103,22 +106,28 @@ def main(csv_input: str = None):
     # Carga del modelo
     # --------------------------------------------------------------------------
     
-    logger.info(f"Cargando modelo desde: {MODELO_FINAL}")
+    logger.info(f"Cargando modelo desde: {archivo_modelo}")
     
-    if not os.path.exists(MODELO_FINAL):
-        raise FileNotFoundError(f"No se encuentra el archivo {MODELO_FINAL}")
+    if not os.path.exists(archivo_modelo):
+        raise FileNotFoundError(f"No se encuentra el archivo {archivo_modelo}")
     
-    config = joblib.load(MODELO_FINAL)
+    config = joblib.load(archivo_modelo)
     logger.info("Modelo cargado correctamente.")
     
     # Extraer configuración (soporta ambas claves para compatibilidad)
     UMBRAL_CICLOS = config.get('umbral_ciclos', 9)
-    # Corregido: usar 'threshold' (singular) como clave principal
-    THRESHOLD = config.get('threshold', config.get('thresholds', 0.45))
+    THRESHOLD = config.get('threshold', 0.45)
     SCALER = config.get('scaler', None)
     COLS_FEATURE = config.get('feature_cols', config.get('feature_names', None))
     MODELO = config.get('modelo', None)
+    NOMBRE_MODELO = config.get('nombre_modelo', 'modelo')
+
+    if threshold_override is not None:
+        logger.info(f"Threshold sobreescrito por argumento: {threshold_override} (modelo tenía: {THRESHOLD})")
+        THRESHOLD = threshold_override
     
+    logger.info(f"Configuración del modelo — Nombre: {NOMBRE_MODELO} | Threshold: {THRESHOLD} | Umbral ciclos: {UMBRAL_CICLOS}")
+
     # --------------------------------------------------------------------------
     # Carga de datos
     # --------------------------------------------------------------------------
@@ -213,12 +222,15 @@ def main(csv_input: str = None):
     logger.info("Guardando resultados...")
     logger.info("=" * 50)
     
+    nombre_dataset = os.path.splitext(os.path.basename(csv_input))[0]
+    threshold_str = str(THRESHOLD).replace('.', '_')
+    csv_salida = os.path.join(DIRECTORIO_SALIDA, f"predicciones_{nombre_dataset}_{NOMBRE_MODELO}_{threshold_str}.csv")
     guardar_predicciones(
         df_base=df_input,
         y_real=y_real_bin,
         probas=proba_final,
         threshold=THRESHOLD,
-        path_salida=CSV_PREDICCIONES
+        path_salida=csv_salida
     )
     
     logger.info("=" * 70)
@@ -236,12 +248,24 @@ if __name__ == "__main__":
     
     parser = ArgumentParserES(
         description='Genera predicciones usando el modelo entrenado.',
-        usage='python predicciones.py <archivo.csv>'
+        usage='python predicciones.py -d <archivo.csv> -m <modelo.pkl> [-t <threshold>]'
     )
     parser.add_argument(
-        'csv_file',
+        '-d', '--dataset',
+        required=True,
         help='Archivo CSV a predecir (ruta relativa o absoluta)'
+    )
+    parser.add_argument(
+        '-m', '--modelo',
+        required=True,
+        help='Archivo PKL del modelo a usar (ruta relativa o absoluta)'
+    )
+    parser.add_argument(
+        '-t', '--threshold',
+        type=float,
+        default=None,
+        help='Threshold de decisión (0-1). Si no se indica, se usa el guardado en el modelo.'
     )
     
     args = parser.parse_args()
-    main(args.csv_file)
+    main(args.dataset, args.modelo, args.threshold)

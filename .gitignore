@@ -1,0 +1,4 @@
+output/
+*.csv
+resultados_preliminar.txt
+.DS_Store
