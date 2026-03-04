@@ -194,7 +194,7 @@ def main(csv_input: str, model_file: str, threshold: float):
         try:
             tn, fp, fn, tp = confusion_matrix(y_real_bin, pred_bin).ravel()
         except ValueError:
-            fp = 0 
+            tn, fp, fn, tp = 0, 0, 0, 0
         
         pct_membranas = det / total_membranas if total_membranas > 0 else 0
         score = calcular_score_balanceado(pct_membranas, fp, total_membranas, PESO_FALSOS_POSITIVOS)
@@ -204,6 +204,7 @@ def main(csv_input: str, model_file: str, threshold: float):
         logger.info("=" * 60)
         logger.info(f"Membranas con rotura (Total): {total_membranas}")
         logger.info(f"Membranas Detectadas:         {det}")
+        logger.info(f"TP: {tp} | FP: {fp} | FN: {fn} | TN: {tn}")
         logger.info(f"Falsos Positivos (Filas):     {fp}")
         logger.info(f"Score Balanceado:             {score:.2f}")
     else:
@@ -236,7 +237,6 @@ def main(csv_input: str, model_file: str, threshold: float):
 
 if __name__ == "__main__":
     class ArgumentParserES(argparse.ArgumentParser):
-        """ArgumentParser con mensajes en castellano."""
         def error(self, message):
             self.print_usage(sys.stderr)
             sys.stderr.write(f'Error: Se requiere especificar el archivo CSV a predecir.\n')

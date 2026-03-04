@@ -5,20 +5,23 @@ Sistema de Machine Learning para predecir roturas de membranas en prensas indust
 ## 📁 Estructura del Proyecto
 
 ```
-GIT/
-├── config.py           # Configuración centralizada
-├── utils.py            # Funciones compartidas
-├── procesado.py        # Pipeline de procesamiento de datos
-├── preliminar.ipynb    # Búsqueda del mejor umbral de ciclos
-├── modelado.ipynb      # Creación del modelo final
-├── predicciones.py     # Script de inferencia
-└── output/             # Directorio de salida (generado)
-    ├── entrenar.csv
-    ├── validar.csv
-    ├── testear.csv
-    ├── modelo_preliminar.pkl
-    ├── modelo_final.pkl
-    └── predicciones.csv
+TFG/
+├── config.py               # Configuración centralizada (rutas, hiperparámetros, constantes)
+├── utils.py                # Funciones compartidas (feature engineering, métricas, evaluación)
+├── procesado.py            # Pipeline de procesamiento de datos crudos
+├── preliminar.ipynb        # Búsqueda del mejor umbral de ciclos y modelo base
+├── modelado.ipynb          # Optimización de hiperparámetros con Optuna
+├── entrenar_modelo.py      # Entrenamiento final del modelo elegido
+├── predicciones.py         # Script de inferencia y evaluación
+└── output/                 # Directorio de salida (generado automáticamente)
+    ├── entrenar.csv                    # Conjunto de entrenamiento
+    ├── validar.csv                     # Conjunto de validación
+    ├── testear.csv                     # Conjunto de testeo (no visto en modelado)
+    ├── resultados_preliminar.csv       # Grilla completa del análisis preliminar
+    ├── registro_mejores_modelos.csv    # Mejores configuraciones por modelo/métrica
+    ├── todas_las_configs.joblib        # Hiperparámetros optimizados (para entrenar_modelo.py)
+    ├── modelo_<nombre>.pkl             # Modelo entrenado listo para producción
+    └── predicciones_<...>.csv          # Resultados de inferencia
 ```
 
 ## 📋 Requisitos
@@ -45,96 +48,113 @@ venv\Scripts\activate
 pip install pandas numpy scikit-learn xgboost lightgbm catboost optuna imbalanced-learn joblib jupyter
 ```
 
-### Instalación de Jupyter Notebook
-
-Si no se instaló con las dependencias:
-```bash
-pip install jupyter
-```
-
-**Para usar los notebooks:**
-```bash
-jupyter notebook
-```
-Esto abrirá una interfaz web donde puedes ejecutar `preliminar.ipynb` y `modelado.ipynb`.
-
 ### Datos de Entrada
 
-Colocar en el directorio raíz:
-- `parametros_prensa_1.csv` - Parámetros de ciclos de prensa 1
-- `parametros_prensa_2.csv` - Parámetros de ciclos de prensa 2
-- `excel_membranas_P1_zulu.csv` - Eventos de membranas prensa 1
-- `excel_membranas_P2_zulu.csv` - Eventos de membranas prensa 2
+Colocar en el directorio raíz del proyecto:
+- `parametros_prensa_1.csv` — Parámetros de ciclos de la prensa 1
+- `parametros_prensa_2.csv` — Parámetros de ciclos de la prensa 2
+- `excel_membranas_P1_zulu.csv` — Eventos de membranas de la prensa 1
+- `excel_membranas_P2_zulu.csv` — Eventos de membranas de la prensa 2
 
-**Formato completo de parámetros:**
-```
-Name,Description,Path,Timestamp,Value,Value_ID,UnitsAbbreviation,DefaultUnitsName,DefaultUnitsNameAbbreviation,Type,TypeQualifier,CategoryNames,WebId,Errors
-```
-**Columnas relevantes:** `Timestamp`, `Name`, `Value`
+**Formato de parámetros** (columnas relevantes): `Timestamp`, `Name`, `Value`
 
-**Formato completo de membranas:**
-```
-Description,Timestamp_Removed,Timestamp_Created,Recipe,Press,Number of cures
-```
-**Columnas relevantes:** `Timestamp_Created`, `Description`, `Number of cures`
+**Formato de membranas** (columnas relevantes): `Timestamp_Created`, `Description`, `Number of cures`
 
-## 🚀 Uso
+---
 
-### 1. Procesamiento de Datos
+## 🚀 Flujo de Ejecución
+
+### Paso 1 — Procesamiento de datos
 ```bash
 python procesado.py
 ```
-Genera los CSVs de entrenamiento, validación y testeo en `output/`:
-- `entrenar.csv` - Usado en entrenamiento del modelo
-- `validar.csv` - Usado en entrenamiento del modelo
-- `testear.csv` - **NO usado en entrenamiento**, reservado para validación final
+Procesa los CSVs de las dos prensas, une las etapas de cada ciclo (barrido, cocción, conformación), añade los ciclos de vida de cada membrana y divide el dataset en tres conjuntos:
 
-### 2. Entrenamiento Preliminar
-Ejecutar el notebook `preliminar.ipynb` para encontrar el mejor umbral de ciclos y modelo base.
+| Fichero | Uso |
+|---|---|
+| `entrenar.csv` | Entrenamiento de modelos |
+| `validar.csv` | Evaluación durante el modelado |
+| `testear.csv` | Evaluación final (no visto en modelado) |
 
-**Usa:** `entrenar.csv`, `validar.csv`
+---
 
-Guarda: `output/modelo_preliminar.pkl`
+### Paso 2 — Análisis preliminar
+Ejecutar el notebook **`preliminar.ipynb`**.
 
-### 3. Modelado final
-Ejecutar el notebook `modelado.ipynb` para optimizar hiperparámetros con múltiples métricas y obtener el modelo final.
+Entrena 6 modelos base con distintos umbrales de ciclos (3, 5, 7, 9) y thresholds de decisión, usando validación en `validar.csv` y balanceo SMOTE. Guarda la grilla completa de resultados:
+- `output/resultados_preliminar.csv`
 
-**Usa:** `entrenar.csv`, `validar.csv`
+El umbral óptimo elegido (`UMBRAL_CICLOS_DEFAULT = 9`) queda fijado en `config.py`.
 
-Guarda: `output/modelo_final.pkl`
+---
 
-### 4. Predicciones
+### Paso 3 — Optimización de hiperparámetros
+Ejecutar el notebook **`modelado.ipynb`**.
 
-> **Doble propósito:** Este script sirve tanto para **validar el modelo** con datos no vistos como para **producción**.
+Para cada modelo y métrica (F1, Recall, MCC y score personalizado), optimiza hiperparámetros con **Optuna** (50 trials, validación cruzada estratificada de 5 folds). Evalúa los modelos resultantes en `validar.csv` y guarda:
+- `output/registro_mejores_modelos.csv` — ranking de todas las configuraciones
+- `output/todas_las_configs.joblib` — hiperparámetros para uso en `entrenar_modelo.py`
 
-**Uso:**
+---
+
+### Paso 4 — Entrenamiento final
 ```bash
-python predicciones.py <archivo.csv>
+# Ver todos los modelos disponibles y sus scores:
+python entrenar_modelo.py --listar
+
+# Entrenar el modelo elegido:
+python entrenar_modelo.py -n <nombre_modelo>
 ```
 
-#### 4.1. Validación del modelo
-```bash
-python predicciones.py testear.csv
-```
-Usa `testear.csv` (dataset que **NO** fue usado en la creación del modelo) para evaluar el rendimiento final.
+Carga los hiperparámetros optimizados del paso anterior, entrena sobre **train + validación completos** con SMOTE y guarda el modelo listo para producción:
+- `output/modelo_<nombre_modelo>.pkl`
 
-Genera: `output/predicciones.csv` con métricas de validación.
+El `.pkl` contiene: modelo entrenado, scaler ajustado y lista de features, todo lo necesario para inferencia sin dependencias externas.
 
-#### 4.2. Uso en producción
+**Ejemplo:**
 ```bash
-python predicciones.py datos_nuevos.csv
-python predicciones.py /ruta/completa/al/archivo.csv
+python entrenar_modelo.py -n "ExtraTrees_Score Propio"
 ```
 
-**Nota:** El script detecta automáticamente si los datos tienen la columna `Ciclos`. Si está presente, calcula métricas; si no, solo genera predicciones.
+---
+
+### Paso 5 — Predicciones
+```bash
+python predicciones.py -d <archivo.csv> -m <modelo.pkl> -t <threshold>
+```
+
+| Argumento | Descripción |
+|---|---|
+| `-d` / `--dataset` | CSV de entrada (ruta relativa o absoluta) |
+| `-m` / `--modelo` | Fichero `.pkl` del modelo a usar |
+| `-t` / `--threshold` | Umbral de decisión (valor entre 0 y 1) |
+
+El script aplica automáticamente el mismo feature engineering y escalado que en el entrenamiento. Si el CSV contiene la columna `Ciclos`, calcula métricas completas (TP, FP, FN, TN, membranas detectadas, score balanceado); si no, solo genera predicciones.
+
+Genera: `output/predicciones_<dataset>_<modelo>_<threshold>.csv`
+
+**Ejemplo — evaluación con datos de testeo:**
+```bash
+python predicciones.py -d testear.csv -m "output/modelo_ExtraTrees_Score Propio.pkl" -t 0.3
+```
+
+**Ejemplo — producción con datos nuevos:**
+```bash
+python predicciones.py -d /ruta/datos_nuevos.csv -m "output/modelo_ExtraTrees_Score Propio.pkl" -t 0.3
+```
+
+---
 
 ## ⚙️ Configuración
 
-Todos los parámetros están centralizados en `config.py`:
+Todos los parámetros clave están centralizados en `config.py`:
 
-| Parámetro | Descripción | Valor por defecto |
-|-----------|-------------|-------------------|
-| `RANDOM_STATE` | Semilla para reproducibilidad | 42 |
-| `UMBRAL_CICLOS_DEFAULT` | Umbral de ciclos si no hay modelo preliminar | 9 |
-| `N_TRIALS_OPTUNA` | Número de trials de optimización | 50 |
-| `PESO_FALSOS_POSITIVOS` | Penalización de FP en score personalizado | 20 |
+| Parámetro | Descripción | Valor |
+|---|---|---|
+| `RANDOM_STATE` | Semilla para reproducibilidad | `42` |
+| `UMBRALES_CICLOS` | Umbrales explorados en el análisis preliminar | `[3, 5, 7, 9]` |
+| `UMBRAL_CICLOS_DEFAULT` | Umbral óptimo elegido tras el preliminar | `9` |
+| `THRESHOLDS` | Thresholds de decisión explorados | `0.05 … 0.95` (paso 0.05) |
+| `N_TRIALS_OPTUNA` | Número de trials por optimización de Optuna | `50` |
+| `PESO_FALSOS_POSITIVOS` | Penalización de FP en el score personalizado | `20` |
+| `MODELOS_DISPONIBLES` | Algoritmos evaluados | XGBoost, LightGBM, RandomForest, ExtraTrees, HistGradientBoosting, CatBoost |
